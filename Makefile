@@ -1,6 +1,6 @@
 CC=gcc
 CXX=g++
-CFLAGS= -O2
+CFLAGS= -O2 -std=c++11
 LDFLAGS=-pthread -lpapi
 
 all: bench

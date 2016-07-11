@@ -10,6 +10,7 @@
 
 #include <string>
 
+#define USE_BARRIER 1
 #include "barrier.h"
 
 #define KB(x) ((x) << 10)
