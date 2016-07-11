@@ -24,6 +24,7 @@ volatile long *mem;
 
 volatile int ready1, ready2, done;
 long max_idx;
+int EventSet = PAPI_NULL;
 
 enum CacheLineState {
   STATE_M,
@@ -71,8 +72,9 @@ void *current_thread(void *arg)
 
   while(!ready2);
 
-  PAPI_ipc(&real_time, &proc_time, &ins, &ipc);
+  //PAPI_ipc(&real_time, &proc_time, &ins, &ipc);
   //start = PAPI_get_real_cyc();
+  PAPI_start(EventSet);
   switch (state) {
   case STATE_M:
     write_mem();
@@ -86,11 +88,13 @@ void *current_thread(void *arg)
   default:
     break;
   }
-  //end = PAPI_get_real_cyc();
-  PAPI_ipc(&real_time, &proc_time, &ins, &ipc);
-  
-  //printf("cyc: %ld, CPI: %ld\n", end-start, (end-start)/max_idx);
-  printf("Ins: %lld, IPC: %f\n", ins, ipc); 
+  long long values[1];
+  PAPI_read(EventSet, values);
+  PAPI_stop(EventSet, values);
+  printf("cyc: %lld, CPI: %lld\n", values[0], values[0]/max_idx);
+
+  //PAPI_ipc(&real_time, &proc_time, &ins, &ipc);
+  //printf("Ins: %lld, IPC: %f\n", ins, ipc); 
 
   done = 1;
 
@@ -245,6 +249,23 @@ int main(int argc, char **argv)
   state2 = atoi(argv[3]) ? STATE_S : STATE_M;
 
   retval = PAPI_library_init(PAPI_VER_CURRENT);
+
+  if (retval != PAPI_VER_CURRENT) {
+      fprintf(stderr, "Could not initialize PAPI library\n");
+      exit(1);
+  }
+
+  retval = PAPI_create_eventset(&EventSet);
+  if (retval != PAPI_OK) {
+      fprintf(stderr, "Could not create events in PAPI library\n");
+      exit(1);
+  }
+
+  retval = PAPI_add_event(EventSet, PAPI_TOT_CYC);
+  if (retval != PAPI_OK) {
+      fprintf(stderr, "Could not add cycle events in PAPI library\n");
+      exit(1);
+  }
 
   max_idx = mem_size/sizeof(long);
   mem = (long *)malloc(max_idx * sizeof(long));
