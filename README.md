@@ -18,6 +18,7 @@ will be brought to subsequently. The supported states are
 2. Shared state (STATE_S, 1)
 
 An example command line would be:
+
 	./bench 1M 0 1
 	
 This would create two threads and the first thread will modify the memory
