@@ -12,6 +12,7 @@
 
 #define USE_BARRIER 1
 #include "barrier.h"
+#include "stat.h"
 
 #define KB(x) ((x) << 10)
 #define MB(x) ((x) << 20)
@@ -24,6 +25,7 @@ volatile long *mem;
 
 volatile int ready1, ready2, done;
 long max_idx;
+double ipc_result;
 
 enum CacheLineState {
   STATE_M,
@@ -90,7 +92,8 @@ void *current_thread(void *arg)
   PAPI_ipc(&real_time, &proc_time, &ins, &ipc);
   
   //printf("cyc: %ld, CPI: %ld\n", end-start, (end-start)/max_idx);
-  printf("Ins: %lld, IPC: %f\n", ins, ipc); 
+  //printf("Ins: %lld, IPC: %f\n", ins, ipc); 
+  ipc_result = ipc;
 
   done = 1;
 
@@ -230,6 +233,7 @@ int main(int argc, char **argv)
 {
   int i = 0;
   int retval;
+  double results[10];
 
   if (argc < 4) {
     fprintf(stderr, "Usage: %s <mem size> <state thread1> <state thread2>\n \
@@ -253,8 +257,11 @@ int main(int argc, char **argv)
 
   for (i = 0; i < 10; i++) {
     run_bench();
+    results[i] = ipc_result;
     flush_mem();
   }
+
+  printf("%f, %f\n", get_mean(results, 10), get_stddev(results, 10));
 
   free((void *)mem);
   PAPI_shutdown();
