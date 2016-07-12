@@ -261,7 +261,7 @@ int main(int argc, char **argv)
     flush_mem();
   }
 
-  printf("%f, %f\n", get_mean(results, 10), get_stddev(results, 10));
+  printf("%d, %f, %f\n", mem_size, get_mean(results, 10), get_stddev(results, 10));
 
   free((void *)mem);
   PAPI_shutdown();
