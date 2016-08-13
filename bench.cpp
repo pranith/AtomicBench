@@ -7,6 +7,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <errno.h>
+#include <atomic>
 
 #include <string>
 
@@ -34,6 +35,28 @@ enum CacheLineState {
 };
 
 enum CacheLineState state1, state2;
+
+void write_mem_atomic(void)
+{
+  volatile long dest = ~0;
+  for (int i = 0; i < REPEAT; i++) {
+    long index = 0;
+    for (int j = 0; j < max_idx; j++) {
+      //printf("%ld %ld\n", index, mem[index]);
+      __atomic_exchange_n(mem+index, mem[index] & dest, __ATOMIC_SEQ_CST);
+      index = mem[index];
+    }
+  }
+  barrier();
+}
+
+void read_mem_atomic(void)
+{
+  volatile int index = 0;
+  for (int j = 0; j < max_idx; j++) {
+    index = __atomic_load_n(mem+index, __ATOMIC_SEQ_CST);
+  }
+}
 
 void write_mem(void)
 {
@@ -77,10 +100,10 @@ void *current_thread(void *arg)
   //start = PAPI_get_real_cyc();
   switch (state) {
   case STATE_M:
-    write_mem();
+    write_mem_atomic();
     break;
   case STATE_S:
-    read_mem();
+    read_mem_atomic();
     break;
   case STATE_I:
     flush_mem();
@@ -108,10 +131,10 @@ void *other_thread(void *arg)
 
   switch (state) {
   case STATE_M:
-    write_mem();
+    write_mem_atomic();
     break;
   case STATE_S:
-    read_mem();
+    read_mem_atomic();
     break;
   case STATE_I:
     flush_mem();
@@ -134,7 +157,7 @@ void run_bench(void)
   CPU_ZERO(&cpuset1);
   CPU_ZERO(&cpuset2);
   CPU_SET(1, &cpuset1);
-  CPU_SET(2, &cpuset2);
+  CPU_SET(1, &cpuset2);
 
   done = 0; ready1 = 0; ready2 = 0;
 
